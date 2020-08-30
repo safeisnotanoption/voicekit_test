@@ -18,74 +18,36 @@
 """
 
 import argparse
+import datetime
+import logging.config
 import os
+from uuid import uuid4
 
-from tinkoff_voicekit_client import ClientSTT
-
-
-API_KEY = os.environ.get('API_KEY')
-SECRET_KEY = os.environ.get('SECRET_KEY')
-
-parser = argparse.ArgumentParser(description='processes the .wav file, phone number, flag of the need to write '
-                                             'to the database, recognition stage')
-parser.add_argument('filepath', type=str, help='the path to the .wav file')
-parser.add_argument('phone', type=str, help='the phone number')
-parser.add_argument('-w', '--write_to_database', action='store_true', help='write the result to the database')
-parser.add_argument('recognition_stage', type=str, help='recognition stage', choices=['stage_one', 'stage_two'])
-
-args = parser.parse_args()
+import config
+import services
 
 
-def voice_recognition() -> list:
-    """ Отправляем файл на распознавание"""
-    client = ClientSTT(API_KEY, SECRET_KEY)
-    wav_file = args.filepath
-    audio_config = {
-        "encoding": "LINEAR16",
-        "sample_rate_hertz": 8000,
-        "num_channels": 1
-    }
-    response = client.recognize(wav_file, audio_config)
-    return response
+# Создаем логгер
+logging.config.dictConfig(config.LOGGING_CONFIG)
+logger = logging.getLogger('voicekit_logger')
 
-
-def s2f(x):
-    """ Преобразуем строковый ответ с 's' в тип float """
-    return float(x.strip('s'))
-
-
-def calc_duration(response: list) -> float:
-    """ Считаем длительность аудио """
-    start_time = s2f(response[0]['start_time'])
-    end_time = s2f(response[0]['end_time'])
-    return start_time - end_time
-
-
-def stage_one(transcript: str) -> bool:
-    if 'автоответчик' in transcript:
-        return False
-    else:
-        return True
-
-
-def stage_two(transcript: str) -> bool:
-    return False
-
-
-def write_to_database():
-    pass
-
-
-print(args.filepath, args.phone, args.write_to_database, args.recognition_stage)
 
 if __name__ == "__main__":
-    response_from_server = voice_recognition()
-    transcript_from_response = response_from_server[0]['alternatives'][0]['transcript']
-    print(transcript_from_response)
-    duration = calc_duration(response_from_server)
-    print(duration)
+    args = services.create_parser()
+    response = services.voice_recognition(args.filepath)
+    transcript = response[0]["alternatives"][0]["transcript"]
+    duration = services.calc_duration(response)
     result = False
-    if args.recognition_stage == 'stage_one':
-        result = stage_one()
-    elif args.recognition_stage == 'stage_two':
-        result = stage_two()
+
+    if args.recognition_stage == "stage_one":
+        result = services.stage_one(transcript)
+    elif args.recognition_stage == "stage_two":
+        result = services.stage_two(transcript)
+
+    current_time = datetime.datetime.now()
+    operation_id = uuid4()
+
+    services.write_to_log_info(current_time, operation_id, result, args.phone, duration, transcript)
+    # logger.info("%s, %s, %s, %s, %s, %s", current_time, operation_id, result, args.phone, duration, transcript)
+    if args.write_to_database:
+        services.write_to_database(current_time, operation_id, result, args.phone, duration, transcript)
