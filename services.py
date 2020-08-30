@@ -120,15 +120,9 @@ def write_to_database(current_time, operation_id, result, phone, duration, trans
                                 port=config.PG_PORT,
                                 database="voicekit_db")
         cur = conn.cursor()
-
-        cur.execute(query,
-                    (current_time,
-                     operation_id,
-                     result,
-                     phone,
-                     duration,
-                     transcript)
-                    )
+        cur.execute(query, (current_time, operation_id, result, phone, duration, transcript))
+        conn.commit()
+        cur.close()
 
     except psycopg2.OperationalError:
         logger.exception("Не удалось подключиться к базе данных. Проверьте работу сервера и настроек PostgreSQL")

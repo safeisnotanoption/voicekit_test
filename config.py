@@ -13,9 +13,6 @@ PG_PASSWORD = os.environ.get("PG_PASSWORD")
 PG_HOST = "127.0.0.1"
 PG_PORT = "5432"
 
-
-
-
 # Настройки логгера
 BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 

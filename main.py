@@ -37,8 +37,8 @@ if __name__ == "__main__":
     response = services.voice_recognition(args.filepath)
     transcript = response[0]["alternatives"][0]["transcript"]
     duration = services.calc_duration(response)
-    result = False
 
+    result = False
     if args.recognition_stage == "stage_one":
         result = services.stage_one(transcript)
     elif args.recognition_stage == "stage_two":
@@ -51,3 +51,6 @@ if __name__ == "__main__":
     # logger.info("%s, %s, %s, %s, %s, %s", current_time, operation_id, result, args.phone, duration, transcript)
     if args.write_to_database:
         services.write_to_database(current_time, operation_id, result, args.phone, duration, transcript)
+
+    # Удаляем .wav файл
+    os.remove(args.filepath)
