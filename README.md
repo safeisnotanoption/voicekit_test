@@ -18,7 +18,7 @@ main.py [-h] [-w] filepath phone {stage_one,stage_two}
 
 опциональные аргументы:
   -w, --write_to_database      записать результат в базу данных
-  -h, --help                   помощь
+  -h, --help                   показать помощь
 ```
 ## Пример
 ```
