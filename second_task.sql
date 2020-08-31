@@ -17,4 +17,4 @@ FROM voice_call
 JOIN project ON project.id = voice_call.project_id
 JOIN server ON server.id = voice_call.server_id 
 WHERE datetime>'2020-08-01' and datetime<'2020-09-01'
-GROUP BY date, project.name, server.name, server.ip_address;
+GROUP BY date, project_name, server_name, server.ip_address;
