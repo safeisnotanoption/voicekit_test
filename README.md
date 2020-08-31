@@ -1,6 +1,6 @@
 # voicekit_test
  
-## Устанока
+## Установка
 
 - Создайте виртуальное окружение и выполните 
 ```pip install requirements.txt```
