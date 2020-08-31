@@ -1,7 +1,7 @@
 """ Здесь хранятся все настройки """
 
-import os
 import logging
+import os
 
 # Берём API_KET и SECRET_KEY из переменных окружения
 API_KEY = os.environ.get("API_KEY")
@@ -36,36 +36,41 @@ LOGGING_CONFIG = {
         }
     },
     "formatters": {
-        "info_formatter": {
-            "format": "{message}",
-            "style": "{",
+        "info": {
+            "format": "%(message)s",
         },
-        "error_formatter": {
-            "format": "{asctime} {module} {message}",
-            "style": "{",
+        "error": {
+            "format": "%(asctime)s %(message)s",
         },
+        "console": {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+        }
     },
     "handlers": {
         "file_info": {
-            "level": logging.INFO,
+            "level": "INFO",
             "class": "logging.FileHandler",
             "filename": os.path.join(BASE_DIR, "info.log"),
-            "formatter": "info_formatter",
+            "formatter": "info",
             "filters": ["info_filter"],
         },
         "file_error": {
             "level": "ERROR",
             "class": "logging.FileHandler",
             "filename": os.path.join(BASE_DIR, "error.log"),
-            "formatter": "error_formatter",
+            "formatter": "error",
+        },
+        "console": {
+            "level": "DEBUG",
+            "formatter": "console",
+            "class": "logging.StreamHandler",
+            "stream": "ext://sys.stdout"
         },
     },
     "loggers": {
-        'voicekit_logger': {
-            'handlers': ['file_info', 'file_error'],
-            'level': 'DEBUG',
+        "voicekit_logger": {
+            "handlers": ["file_info", "file_error", "console"],
+            "level": "DEBUG",
         },
     },
 }
-
-

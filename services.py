@@ -5,6 +5,7 @@ import logging
 
 import psycopg2
 import psycopg2.extras
+
 from tinkoff_voicekit_client import ClientSTT
 
 import config
@@ -27,14 +28,21 @@ def create_parser():
 
 def voice_recognition(filepath: str) -> list:
     """ Отправляем файл на распознавание"""
-    client = ClientSTT(config.API_KEY, config.SECRET_KEY)
-    wav_file = filepath
+    try:
+        client = ClientSTT(config.API_KEY, config.SECRET_KEY)
+    except Exception:
+        logger.error("Ошибка при подключении к tinkoff-voicekit. Проверьте интернет-соединение, API-KEY и SECRET-KEY")
+        raise
     audio_config = {
         "encoding": "LINEAR16",
         "sample_rate_hertz": 8000,
         "num_channels": 1
     }
-    response = client.recognize(wav_file, audio_config)
+    try:
+        response = client.recognize(filepath, audio_config)
+    except ValueError:
+        logger.exception("Ошибка при чтении файла")
+        raise
     return response
 
 
@@ -57,17 +65,24 @@ def find_words_in_string(transcript: str, words: list) -> bool:
     :param transcript: строка, в которой производится поиск
     :param words: список из слов, которые мы ищем в строке
     """
-    if any(word in transcript for word in words):
+    if any(word in transcript.split() for word in words):
         return True
     else:
         return False
 
 
+class ResultNotFoundException(Exception):
+    pass
+
+
 def stage_one(transcript: str) -> bool:
     """ Первый этап """
-    words = ["автоответчик", "сигнала"]
+    words = ["автоответчик", "автоматический", "голосовой", "помощник", "сигнала"]
     if find_words_in_string(transcript, words):
         return False
+    elif not transcript:
+        raise ResultNotFoundException("Ошибка при проверке голосового файла во время первого этапа. "
+                                      "Не удалось распознать слова в записи.")
     else:
         return True
 
@@ -75,11 +90,15 @@ def stage_one(transcript: str) -> bool:
 def stage_two(transcript: str) -> bool:
     """ Второй этап """
     affirmative = ["говорите", "да", "конечно", "хорошо", "слушаю"]
-    negative = ["нет", "неудобно", "не", "хватит"]
-    if find_words_in_string(transcript, affirmative):
-        return True
-    elif find_words_in_string(transcript, negative):
+    negative = ["нет", "не", "неудобно", "хватит", "досвидания", "свидания", "потом", "позже", "попозже"]
+    if find_words_in_string(transcript, negative):
         return False
+    elif find_words_in_string(transcript, affirmative):
+        return True
+    else:
+        raise ResultNotFoundException("Ошибка при проверке голосового файла во время второго этапа.\n"
+                                      "Не найдены слова подтверждения или отказа. Распознанный текст:\n"
+                                      f"{transcript or 'отсутствует'}")
 
 
 def write_to_log_info(current_time, operation_id, result, phone, duration, transcript):
@@ -123,10 +142,9 @@ def write_to_database(current_time, operation_id, result, phone, duration, trans
         cur.execute(query, (current_time, operation_id, result, phone, duration, transcript))
         conn.commit()
         cur.close()
-
     except psycopg2.OperationalError:
         logger.exception("Не удалось подключиться к базе данных. Проверьте работу сервера и настроек PostgreSQL")
-    except Exception as e:
+    except Exception:
         logger.exception("Ошибка во время записи в базу данных. ")
     finally:
         conn.close()
